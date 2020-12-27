@@ -4,6 +4,8 @@ const pool = require("./db");
 
 app.use(express.json()) // => req.body
 
+const router = express.Router();
+
 //routes
 
 //get all
@@ -39,12 +41,17 @@ app.get("/products/:id", async (req, res) => {
 
 app.post("/products", async (req, res) => {
     try {
+        const {name} = req.body;
         const {description} = req.body;
+        const {price} = req.body;
+        const {weight} = req.body;
+        const {category} = req.body;
+
         const newProduct = await pool.query(
-            "INSERT INTO products (description)" +
-            "VALUES ($1) RETURNING *",
-            [description]
-        );
+            "INSERT INTO products (name, description, price, weight, category)" +
+            "VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            [name, description, price, weight, category]
+    );
         res.json(newProduct.rows[0]);
     } catch (err) {
         console.log(err.message);
@@ -56,11 +63,20 @@ app.post("/products", async (req, res) => {
 app.put("/products/:id", async (req, res) => {
     try {
         const {id} = req.params; //where
-        const {description} = req.body; //set
+        const {name} = req.body; //set
+        const {description} = req.body;
+        const {price} = req.body;
+        const {weight} = req.body;
+        const {category} = req.body;
 
         const updateProduct = await pool.query(
-            "UPDATE products SET description = $1 WHERE products_id = $2;",
-            [description, id]
+            "UPDATE products SET name = $2, " +
+            "description = $3, " +
+            "price = $4, " +
+            "weight = $5, " +
+            "category = $6" +
+            "WHERE products_id = $1;",
+            [id, name, description, price, weight, category]
         );
         res.json("Product updated!");
     } catch (err) {

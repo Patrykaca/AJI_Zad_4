@@ -95,3 +95,7 @@ INSERT INTO purchase_order (user_name,
                             number_of_orders)
 VALUES ('Patryk', 'kaca@email.com',
         111222333, '{{1,1},{2,3},{3,2}}');
+
+
+SELECT * FROM purchase_order
+where order_status = 1;

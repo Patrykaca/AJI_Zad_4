@@ -13,6 +13,16 @@ $$
 SELECT (NOT EXISTS(SELECT 1 FROM unnest(t) q WHERE q < 0))
 $$;
 
+CREATE FUNCTION include_in_products(t INTEGER[])
+    RETURNS boolean
+    IMMUTABLE
+    STRICT
+    LANGUAGE SQL
+AS
+$$
+SELECT (NOT EXISTS(SELECT 1 FROM unnest(t) q WHERE q < 0));
+$$;
+
 CREATE TABLE category
 (
     category_id   SERIAL PRIMARY KEY,
@@ -101,20 +111,29 @@ INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orde
 VALUES ('Patryk', 'pat@ty.k', 999888777, '{{-1,2},{2,1},{3,3}}');
 
 INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders)
-VALUES ('Patryk', 'pat@ty.k', 999888777, ARRAY [[1,2],[2,1]]);
+VALUES ('Patryk', 'pat@ty.k', 999888777, ARRAY [[3,2],[1,1]]);
 
 SELECT unnest(number_of_orders)
 FROM purchase_order;
 
+SELECT *
+FROM purchase_order;
+
+
 
 do
 $$
-
     begin
         SELECT doesnt_have_negative(ARRAY[1,2]) WHERE doesnt_have_negative(ARRAY[1,-1]) = true;
         INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders)
-        VALUES ('Patryk', 'pat@ty.k', 999888777, '{{-1,2},{2,1},{3,3}}');
+        VALUES ('Patryk', 'pat@ty.k', 999888777, '{{1,2},{2,1},{3,3}}');
     EXCEPTION
         WHEN check_violation THEN RETURN;
     end;
-$$
+$$;
+
+select (number_of_orders[3][1]) from purchase_order ;
+
+select products_id
+from products
+where products_id = 1;

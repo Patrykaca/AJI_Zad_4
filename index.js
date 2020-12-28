@@ -166,12 +166,32 @@ app.post("/orders", async (req, res) => {
             return;
         }
 
+        try {
+            const check = await pool.query(
+                "SELECT doesnt_have_negative($1) " +
+                "WHERE doesnt_have_negative($1) = false",
+                [number_of_orders]
+            )
+
+            console.log(check.rows.length);
+            if(check.rows.length === 1) {
+                res.json("Order contain negative numbers!");
+                return;
+            }
+        } catch (err) {
+            console.log(err.message);
+        }
+
+       // let que = "DO $$ BEGIN INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders) VALUES ($1, $2, $3, $4); EXCEPTION WHEN check_violation THEN RETURN; END; $$";
+
+        //console.log(que);
         const newOrder = await pool.query(
-            "INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders)" +
-            "VALUES ($1, $2, $3, $4) RETURNING *",
+            "INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders) " +
+            "VALUES ($1, $2, $3, $4); ",
             [user_name, user_email, user_phone_nr, number_of_orders]
+
         );
-        res.json(newOrder.rows[0]);
+        res.json("Order updated!");
     } catch (err) {
         console.log(err.message);
     }

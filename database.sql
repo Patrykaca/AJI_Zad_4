@@ -3,6 +3,16 @@ CREATE DATABASE aji_zad_4;
 --SET search_path TO aji_zad_4, public;
 -- w datagrip ustaw na kodem prawy górny róg na aji_zad_4
 
+CREATE FUNCTION doesnt_have_negative(t INTEGER[])
+    RETURNS boolean
+    IMMUTABLE
+    STRICT
+    LANGUAGE SQL
+AS
+$$
+SELECT (NOT EXISTS(SELECT 1 FROM unnest(t) q WHERE q < 0))
+$$;
+
 CREATE TABLE category
 (
     category_id   SERIAL PRIMARY KEY,
@@ -26,8 +36,11 @@ CREATE TABLE purchase_order
     number_of_orders  INTEGER ARRAY,
     CONSTRAINT fk_order_status
         FOREIGN KEY (order_status)
-            REFERENCES order_status (order_status_id)
+            REFERENCES order_status (order_status_id),
+    CONSTRAINT check_not_negative CHECK ( doesnt_have_negative(number_of_orders) )
 );
+
+--DROP TABLE purchase_order;
 
 CREATE TABLE products
 (
@@ -84,3 +97,24 @@ VALUES ('The Godfather - Mario Puzo', 'novel about mafia',
 SELECT *
 FROM products;
 
+INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders)
+VALUES ('Patryk', 'pat@ty.k', 999888777, '{{-1,2},{2,1},{3,3}}');
+
+INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders)
+VALUES ('Patryk', 'pat@ty.k', 999888777, ARRAY [[1,2],[2,1]]);
+
+SELECT unnest(number_of_orders)
+FROM purchase_order;
+
+
+do
+$$
+
+    begin
+        SELECT doesnt_have_negative(ARRAY[1,2]) WHERE doesnt_have_negative(ARRAY[1,-1]) = true;
+        INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders)
+        VALUES ('Patryk', 'pat@ty.k', 999888777, '{{-1,2},{2,1},{3,3}}');
+    EXCEPTION
+        WHEN check_violation THEN RETURN;
+    end;
+$$

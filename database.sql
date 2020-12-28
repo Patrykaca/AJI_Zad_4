@@ -18,7 +18,7 @@ CREATE TABLE order_status
 CREATE TABLE purchase_order
 (
     purchase_order_id SERIAL PRIMARY KEY,
-    confirmation_date DATE DEFAULT CURRENT_DATE,
+    confirmation_date DATE    DEFAULT CURRENT_DATE,
     order_status      INTEGER DEFAULT 1,
     user_name         VARCHAR(255),
     user_email        VARCHAR(255),
@@ -39,7 +39,8 @@ CREATE TABLE products
     category    INT,
     CONSTRAINT fk_category
         FOREIGN KEY (category)
-            REFERENCES category (category_id)
+            REFERENCES category (category_id),
+    CONSTRAINT check_weight CHECK ( weight > 0 )
 );
 
 INSERT INTO category (category_type)
@@ -82,20 +83,4 @@ VALUES ('The Godfather - Mario Puzo', 'novel about mafia',
 
 SELECT *
 FROM products;
-DROP TABLE purchase_order;
 
-INSERT INTO purchase_order (user_name,
-                            user_email, user_phone_nr,
-                            number_of_orders)
-VALUES ('Patryk', 'kaca@email.com',
-        111222333, '{{1,1},{2,3}}');
-
-INSERT INTO purchase_order (user_name,
-                            user_email, user_phone_nr,
-                            number_of_orders)
-VALUES ('Patryk', 'kaca@email.com',
-        111222333, '{{1,1},{2,3},{3,2}}');
-
-
-SELECT * FROM purchase_order
-where order_status = 1;

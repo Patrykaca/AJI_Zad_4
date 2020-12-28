@@ -4,10 +4,6 @@ const pool = require("./db");
 
 app.use(express.json()) // => req.body
 
-//routes
-
-//get all
-
 app.get("/products", async (req, res) => {
     try {
         const allProducts = await pool.query(
@@ -19,8 +15,6 @@ app.get("/products", async (req, res) => {
         console.log(err.message);
     }
 });
-
-//get one
 
 app.get("/products/:id", async (req, res) => {
     const {id} = req.params;
@@ -35,8 +29,6 @@ app.get("/products/:id", async (req, res) => {
     }
 });
 
-// create
-
 app.post("/products", async (req, res) => {
     try {
         const {name} = req.body;
@@ -45,18 +37,24 @@ app.post("/products", async (req, res) => {
         const {weight} = req.body;
         const {category} = req.body;
 
+        if (price <= 0) {
+            res.json('price is too low');
+        }
+
+        if (weight <= 0) {
+            res.json('weight is too low');
+        }
+
         const newProduct = await pool.query(
             "INSERT INTO products (name, description, price, weight, category)" +
             "VALUES ($1, $2, $3, $4, $5) RETURNING *",
             [name, description, price, weight, category]
-    );
+        );
         res.json(newProduct.rows[0]);
     } catch (err) {
         console.log(err.message);
     }
 });
-
-//update
 
 app.put("/products/:id", async (req, res) => {
     try {
@@ -67,22 +65,34 @@ app.put("/products/:id", async (req, res) => {
         const {weight} = req.body;
         const {category} = req.body;
 
+        if (price <= 0) {
+            res.json('price is too low');
+            return;
+        }
+
+        if (weight <= 0) {
+            res.json('weight is too low');
+            return;
+        }
         const updateProduct = await pool.query(
             "UPDATE products SET name = $2, " +
             "description = $3, " +
             "price = $4, " +
             "weight = $5, " +
             "category = $6" +
-            "WHERE products_id = $1;",
+            "WHERE products_id = $1" +
+            "RETURNING *",
             [id, name, description, price, weight, category]
         );
-        res.json("Product updated!");
+        if (updateProduct.rows.length === 0) {
+            res.json("Product dont exist!");
+        } else {
+            res.json("Product updated");
+        }
     } catch (err) {
         console.log(err.message);
     }
 });
-
-//delete
 
 app.delete("/products/:id", async (req, res) => {
     try {
@@ -108,47 +118,12 @@ app.get("/categories", async (req, res) => {
     }
 });
 
-app.post("/orders", async (req, res) => {
-    try {
-        const {user_name} = req.body;
-        const {user_email} = req.body;
-        const {user_phone_nr} = req.body;
-        const {number_of_orders} = req.body;
-
-        const newOrder = await pool.query(
-            "INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders)" +
-            "VALUES ($1, $2, $3, $4) RETURNING *",
-            [user_name, user_email, user_phone_nr, number_of_orders]
-        );
-        res.json(newOrder.rows[0]);
-    } catch (err) {
-        console.log(err.message);
-    }
-});
-
 app.get("/orders", async (req, res) => {
     try {
         const allOrders = await pool.query(
             "SELECT * FROM purchase_order"
         );
         res.json(allOrders.rows);
-    } catch (err) {
-        console.log(err.message);
-    }
-});
-
-app.put("/orders/:id/status", async (req, res) => {
-    try {
-        const {id} = req.params; //where
-        const {order_status} = req.body; //set
-
-
-        const updateOrderStatus = await pool.query(
-            "UPDATE purchase_order SET order_status = $2 " +
-            "WHERE purchase_order_id = $1;",
-            [id, order_status]
-        );
-        res.json("Product updated!");
     } catch (err) {
         console.log(err.message);
     }
@@ -179,6 +154,90 @@ app.get("/orders/status", async (req, res) => {
     }
 });
 
+//wip zostało 5
+app.post("/orders", async (req, res) => {
+    try {
+        const {user_name} = req.body;
+        const {user_email} = req.body;
+        const {user_phone_nr} = req.body;
+        const {number_of_orders} = req.body;
+
+        if (!checkUserInOrder(res, user_name, user_email, user_phone_nr)) {
+            return;
+        }
+
+        const newOrder = await pool.query(
+            "INSERT INTO purchase_order (user_name, user_email, user_phone_nr, number_of_orders)" +
+            "VALUES ($1, $2, $3, $4) RETURNING *",
+            [user_name, user_email, user_phone_nr, number_of_orders]
+        );
+        res.json(newOrder.rows[0]);
+    } catch (err) {
+        console.log(err.message);
+    }
+});
+
+app.put("/orders/:id/:status", async (req, res) => {
+    try {
+        const {id} = req.params; //where
+        const {status} = req.params; //where
+
+        try {
+            const idList = await pool.query(
+                "SELECT purchase_order_id FROM purchase_order " +
+                "WHERE purchase_order_id = $1;",
+                [id]
+            );
+            console.log(idList.rows.length);
+            if (idList.rows.length === 0 ) {
+                res.json("Order does not exist!");
+                return
+            }
+        } catch (err) {
+            console.log(err.message);
+        }
+
+        const updateOrderStatus = await pool.query(
+            "UPDATE purchase_order SET order_status = $2 " +
+            "WHERE purchase_order_id = $1 AND " +
+            "order_status < $2 " +
+            "RETURNING *",
+            [id, status]
+        );
+        console.log(updateOrderStatus.length)
+        if (updateOrderStatus.rows.length === 0) {
+            res.json("Product not updated, order status problem!");
+        } else {
+            res.json("Product updated!");
+        }
+    } catch (err) {
+        console.log(err.message);
+    }
+});
+
 app.listen(5000, () => {
     console.log("server is on port 5000");
 });
+
+function checkUserInOrder(res, user_name, user_email, user_phone_nr) {
+    if (user_name.length === 0) {
+        res.json('User name can not be empty!');
+        return false;
+    }
+
+    if (user_email.length === 0) {
+        res.json('User email can not be empty!');
+        return false;
+    }
+
+    if (user_phone_nr.length === 0) {
+        res.json('User phone number can not be empty!');
+        return false;
+    }
+    let regex = new RegExp(/[0-9]/);
+    if (!user_phone_nr.toString().match(regex)) {
+        res.json('User phone number can not contain letters!');
+        return false;
+    }
+    return true;
+}

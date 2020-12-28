@@ -159,11 +159,6 @@ app.post("/orders", async (req, res) => {
         const {user_email} = req.body;
         const {user_phone_nr} = req.body;
         const {number_of_orders} = req.body;
-        let num = number_of_orders.toString().valueOf();
-        num = replaceAllChar(num);
-        let tab = num;
-        tab = tab.split(',')
-        console.log(typeof tab);
 
         if (!checkUserInOrder(res, user_name, user_email, user_phone_nr)) {
             return;
@@ -177,29 +172,26 @@ app.post("/orders", async (req, res) => {
             );
 
             if (check.rows.length === 1) {
-                res.json("Order contain negative numbers!");
+                res.json("Order contains negative numbers!");
                 return;
             }
         } catch (err) {
             console.log(err.message);
         }
 
+        let num = number_of_orders.toString().valueOf();
+        num = replaceAllChar(num); //delete all '{' and '}' from array
+        let tab = num;
+        tab = tab.split(',')
+
         try {
-            console.log(tab);
-            console.log("chuj");
-            for (let i = 0; i < tab.length; i++) {
+            for (let i = 0; i < tab.length; i++) { //delete how many products we are buying, only products_id left
                 tab.splice(i+1, 1);
             }
-          //  console.log(Array.isArray(tab));
-          //  console.log(typeof tab[1]);
-            console.log(tab.toString());
             let intArr = [];
             intArr = tab.toString().split(',').map(Number);
-            console.log(typeof intArr);
-            console.log(intArr);
             for (const item of intArr) {
                 let index = intArr.indexOf(item);
-                console.log('x ' + item);
                 const checkIdLoop = await pool.query(
                     "SELECT * FROM products " +
                     "WHERE products_id = $1 ",
